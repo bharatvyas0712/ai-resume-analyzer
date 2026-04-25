@@ -1,9 +1,7 @@
-from fastapi import FastAPI, UploadFile, File, Form, Request
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import io
-import os
-import tempfile
 
 from resume_parser import extract_text, extract_skills
 from rag_engine import match_jobs
@@ -74,19 +72,27 @@ async def improve(file: UploadFile = File(...)):
     return {"improved_resume": improved}
 
 
-# ✅ FIXED: Frontend already-analyzed data JSON mein bhejta hai
-#    Dobara analyze nahi hoga — same result PDF mein milega
 @app.post("/download-report/")
-async def download_report(request: Request):
-    data = await request.json()   # frontend se JSON aata hai
+async def download_report(file: UploadFile = File(...)):
+    content = await file.read()
+    pdf_file = io.BytesIO(content)
 
-    tmp_dir  = tempfile.gettempdir()                          # ✅ Windows + Linux dono pe kaam karta hai
-    filename = os.path.join(tmp_dir, "resume_report.pdf")
+    text = extract_text(pdf_file)
+    skills = extract_skills(text)
 
+    jobs, job_vectors = match_jobs(text)
+    resume_vector = create_embeddings([text])
+
+    result = analyze_resume(
+        text, jobs, job_vectors, resume_vector, skills
+    )
+
+    data = {
+        "skills": skills,
+        "analysis": result
+    }
+
+    filename = "resume_report.pdf"
     generate_pdf(data, filename)
 
-    return FileResponse(
-        filename,
-        media_type="application/pdf",
-        filename="resume_report.pdf",
-    )
+    return FileResponse(filename, media_type='application/pdf', filename=filename)
