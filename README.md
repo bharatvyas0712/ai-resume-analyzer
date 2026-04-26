@@ -176,9 +176,7 @@ Ollama AI Analysis → UI + PDF Report
 
 ---
 
-## 💬 Interview Highlight
 
-> Built a full-stack AI Resume Analyzer using FastAPI and React, integrating a local LLM (Ollama) for offline intelligent analysis and ATS scoring.
 
 ---
 
